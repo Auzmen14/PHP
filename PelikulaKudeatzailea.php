@@ -8,7 +8,7 @@ class PelikulaKudeatzailea {
     private array $bilaketaEmaitzak = [];
 
     public function __construct(array $pelikulakHasierakoak = []) {
-        $this->pelikulak =$pelikulakHasierakoak;
+        $this->pelikulak = $pelikulakHasierakoak;
     }
 
     public function getPelikulak(): array {
@@ -23,69 +23,87 @@ class PelikulaKudeatzailea {
         return $this->bilaketaEmaitzak;
     }
 
-    /**
-     * PISTA 1: ISAN bidez bilatu
-     * - Erabili `foreach` bat `$this->pelikulak` array-a zeharkatzeko.
-     * - Konparatu `$pelikula->getIsan()` eta sartutako `$isan`.
-     * - Aurkitzen baduzu, bueltatu `$pelikula` objektua.
-     * - Amaieraraino iristen bazara aurkitu gabe, bueltatu `null`.
-     */
+    // ISAN bidez bilatu
     public function bilatuIsan(string $isan): ?Pelikula {
-    foreach ($this->pelikulak as $pelikula) {
-        // Comparamos el ISAN de la película con el que buscamos
-        if ($pelikula->getIsan() === $isan) {
-            return $pelikula; // Si lo encuentra, devuelve el objeto y sale de la función
+        foreach ($this->pelikulak as $pelikula) {
+            if ($pelikula->getIsan() === $isan) {
+                return $pelikula;
+            }
         }
+        return null; 
     }
-    
-    // Si recorre todo el array y no lo encuentra, devuelve null
-    return null; 
-}
 
-    /**
-     * PISTA 2: Testua garbitu (maiuskulak eta azentuak kendu)
-     * - Erabili `mb_strtolower($testua, 'UTF-8')` dena minuskulaz jartzeko.
-     * - Erabili `strtr($testua, $orpoak)` azentuak kentzeko. 
-     *   Adibidez: $orpoak = ['á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ñ'=>'n'];
-     * - Bueltatu testu garbia.
-     */
+    // Testua garbitu (maiuskulak eta azentuak kendu)
     private function garbituTestua(string $testua): string {
-    
-    $testuaMinusculaz = mb_strtolower($testua, 'UTF-8');
-    
-   
-    $orpoak = ['á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ü'=>'u', 'ñ'=>'n'];
-    
-    
-    return strtr($testuaMinusculaz, $orpoak);
-}
-    /**
-     * PISTA 3: Formularioaren logika nagusia
-     * Hemen baldintza guztiak kudeatu behar dituzu:
-     * 
-     * 1. Baldintza: Izena eta ISAN biak hutsik daude? (`$izena === "" && $isan === ""`)
-     *    -> `$this->abisua = "Warning: ..."`
-     * 
-     * 2. Baldintza: ISAN hutsik dago baina Izena BETETA dago?
-     *    -> Garbitu bilatutako izena `garbituTestua()` erabiliz.
-     *    -> `foreach` bidez pelikula guztiak zeharkatu, haien izenak garbitu eta `str_contains()` erabili.
-     *    -> Aurkitutakoak `$this->bilaketaEmaitzak[]` array-an gorde.
-     * 
-     * 3. ISAN beteta badago, lehenik bilatu: `$peli = $this->bilatuIsan($isan);`
-     * 
-     * 4. Baldintza: ISANa jada badago ETA Izena HUTSIK dago?
-     *    -> EZABATU pelikula zerrendatik (erabili `unset($this->pelikulak[$index])` eta `array_values()`).
-     * 
-     * 5. Baldintza: ISANa jada badago ETA eremu guztiak beteta daude?
-     *    -> EGUNERATU pelikularen izena, urtea eta puntuazioa `set` metodoekin.
-     * 
-     * 6. Baldintza: ISANa EZ badago zerrendan:
-     *    -> Egiaztatu ISANak presisoki 8 digitu dituela: `strlen($isan) === 8 && ctype_digit($isan)`
-     *    -> Digituak 8 badira eta eremu guztiak beteta badaude: GORDE berria (`$this->pelikulak[] = new Pelikula(...)`).
-     *    -> Bestela: Muestra un Warning indicando el error.
-     */
-    public function prozesatuFormularioa(string $izena, string$isan, string $urtea, string$puntuazioa): void {
-        // ZURE KODEA HEMEN
+        $testuaMinusculaz = mb_strtolower($testua, 'UTF-8');
+        $orpoak = ['á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ü'=>'u', 'ñ'=>'n'];
+        return strtr($testuaMinusculaz, $orpoak);
+    }
+
+    // Formularioaren logika nagusia
+    public function prozesatuFormularioa(string $izena, string $isan, string $urtea, string $puntuazioa): void {
+        $izena = trim($izena);
+        $isan = trim($isan);
+
+        // 1. Izena eta ISAN hutsik badaude: Warning
+        if ($isan === '' && $izena === '') {
+            $this->abisua = "Warning: Izena eta ISAN eremuak ezin dira biak hutsik egon.";
+            return;
+        }
+
+        // 2. ISAN hutsik badago (eta izena beteta): Izendun bilaketa (tildeak/maiuskulak kontuan hartu gabe)
+        if ($isan === '' && $izena !== '') {
+            $bilatutakoaGarbi = $this->garbituTestua($izena);
+            foreach ($this->pelikulak as $peli) {
+                $peliIzenaGarbi = $this->garbituTestua($peli->getIzena());
+                if (str_contains($peliIzenaGarbi, $bilatutakoaGarbi)) {
+                    $this->bilaketaEmaitzak[] = $peli;
+                }
+            }
+            if (empty($this->bilaketaEmaitzak)) {
+                $this->abisua = "Warning: Ez da aurkitu izen hori duen pelikularik.";
+            }
+            return;
+        }
+
+        // ISAN zenbakia sartu bada, bilatu zerrendan
+        $dagoenPelikula = $this->bilatuIsan($isan);
+
+        // 3. ISAN zerrendan badago ETA Izena HUTSIK badago: EZABATU
+        if ($dagoenPelikula !== null && $izena === '') {
+            foreach ($this->pelikulak as $index => $peli) {
+                if ($peli->getIsan() === $isan) {
+                    unset($this->pelikulak[$index]);
+                    $this->pelikulak = array_values($this->pelikulak); // Indizeak berregituratu
+                    $this->abisua = "Pelikula zerrendatik ezabatu da.";
+                    return;
+                }
+            }
+        }
+
+        // 4. ISAN zerrendan badago ETA eremu guztiak beteta badaude: EGUNERATU
+        if ($dagoenPelikula !== null && $izena !== '' && $urtea !== '' && $puntuazioa !== '') {
+            $dagoenPelikula->setIzena($izena);
+            $dagoenPelikula->setUrtea((int)$urtea);
+            $dagoenPelikula->setPuntuazioa((int)$puntuazioa);
+            $this->abisua = "Pelikularen informazioa eguneratu da.";
+            return;
+        }
+
+        // 5. ISAN zerrendan EZ badago: ERREGISTRO BERRIA (8 digitu baditu)
+        if ($dagoenPelikula === null) {
+            if (strlen($isan) === 8 && ctype_digit($isan)) {
+                if ($izena !== '' && $urtea !== '' && $puntuazioa !== '') {
+                    $this->pelikulak[] = new Pelikula($isan, $izena, (int)$urtea, (int)$puntuazioa);
+                    $this->abisua = "Pelikula berria erregistratu da.";
+                } else {
+                    $this->abisua = "Warning: Erregistro berria sortzeko eremu guztiak bete behar dira.";
+                }
+            } else {
+                $this->abisua = "Warning: ISAN zenbakia ez dago zerrendan eta zehatz-mehatz 8 digitu izan behar ditu.";
+            }
+            return;
+        }
     }
 }
 ?>

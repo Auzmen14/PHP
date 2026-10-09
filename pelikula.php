@@ -27,7 +27,7 @@ class Pelikula {
         return implode(',', [$this->isan, $this->izena, $this->urtea, $this->puntuazioa]);
     }
 
-    // Koma bidezko katetik Pelikula objektua sortu
+    
     public static function fromLine(string $linea): Pelikula {
         $datos = explode(',', $linea);
         return new Pelikula($datos[0], $datos[1], (int)$datos[2], (int)$datos[3]);
